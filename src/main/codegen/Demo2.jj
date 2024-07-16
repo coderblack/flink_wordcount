@@ -1,0 +1,105 @@
+options {
+        STATIC = false;
+        OUTPUT_DIRECTORY = "../java/top/doe/javacc/demo2/gen";
+}
+
+// 1+2*3-4
+// 2.8*(3+5)-10
+// 3*3/2 + 10*(6+4/2) - 2
+// 1+2-3
+// -5*6 + 10
+// -(3+3)*10
+
+PARSER_BEGIN(Demo2Parser)
+
+package top.doe.javacc.demo2.gen;
+public class Demo2Parser {
+
+    public double parseAndCalc() throws Exception{
+
+        return start();
+    }
+
+
+}
+PARSER_END(Demo2Parser)
+
+
+TOKEN : { <#DIGITS: (["0"-"9"])+ >}
+TOKEN : { <NUMBER:  <DIGITS> | <DIGITS>"."<DIGITS> | "."<DIGITS> |  <DIGITS>"."> }
+TOKEN : {<LB: "(" | "（">}
+TOKEN : {<RB: ")" | "）">}
+TOKEN : {
+    <PLUS: "+" >
+    |
+    <MINUS: "-" >
+    |
+    <TIMES: "*" >
+    |
+    <DIVIDE: "/" >
+}
+TOKEN : {<EOL: "\n" | "\r\n" | "\r">}
+
+
+double start():
+{
+        double i;
+}
+{
+        i = expression()
+        <EOL>
+        {return i;}
+
+
+}
+
+
+double expression():
+{
+    double i;
+}
+{
+    i = term()
+    (
+        <PLUS>
+        {i += term();}
+        |
+        <MINUS>
+        {i -= term();}
+    )*
+    {return i;}
+
+}
+
+double term():
+{
+    double i;
+}
+{
+    i = pri()
+    (
+        <TIMES>
+        {i *= pri();}
+        |
+        <DIVIDE>
+        {i /= pri();}
+    ) *
+
+    {return i;}
+}
+
+double pri():
+{
+    Token t;
+    double i;
+}
+{
+    t = <NUMBER>
+    {return Double.parseDouble(t.image);}
+    |
+    <LB> i=expression() <RB>
+    {return i;}
+    |
+    <MINUS> i=pri()
+    {return -i;}
+}

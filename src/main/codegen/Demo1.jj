@@ -1,0 +1,55 @@
+options {
+    STATIC = false;
+    OUTPUT_DIRECTORY = "../java/top/doe/javacc/demo1/gen";
+}
+
+
+PARSER_BEGIN(Demo1Parser)
+
+package top.doe.javacc.demo1.gen;
+public class Demo1Parser {
+
+    public Double parse() throws Exception{
+        return expression();
+    }
+
+}
+PARSER_END(Demo1Parser)
+
+// 78.6+66
+// 66-8787
+// 100.5*66
+// 24/6
+// .66 * 100
+// 89. * 200
+
+TOKEN : { <#DIGITS: (["0"-"9"])+ > }
+TOKEN : { <NUMBER: <DIGITS> | <DIGITS>"."<DIGITS> | "."<DIGITS> | <DIGITS>"." >}
+TOKEN : { <OPERATOR: "+" | "-" | "*" | "/" >}
+
+
+Double expression() throws Exception:
+{
+        Token x;
+        Token op;
+        Token y;
+}
+{
+    x=<NUMBER> op=<OPERATOR> y=<NUMBER>
+    {
+        double a = Double.parseDouble(x.image);
+        double b = Double.parseDouble(y.image);
+        String o = op.image;
+        if("+".equals(o)){
+            return a+b;
+        }else if ("-".equals(o)){
+            return a-b;
+        }else if ("*".equals(o)){
+            return a*b;
+        }else if("/".equals(o)){
+            return a/b;
+        }else{
+            return null;
+        }
+    }
+}
