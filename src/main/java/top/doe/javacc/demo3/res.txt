@@ -1,0 +1,4 @@
+ProjectNode{
+   kind=SELECT,
+   children_size =1,
+   columnList=[Column{filedName='id', tableName='member'}, Column{filedName='name', tableName='member'}, Column{filedName='age', tableName='member'}, Column{filedName='oid', tableName='order'}, Column{filedName='amount', tableName='order'}]}

@@ -1,0 +1,137 @@
+options {
+            STATIC = false;
+            OUTPUT_DIRECTORY = "../java/top/doe/javacc/demo3/gen";
+}
+
+PARSER_BEGIN(SqlParser)
+package top.doe.javacc.demo3.gen;
+import top.doe.javacc.demo3.nodes.*;
+import java.util.ArrayList;
+import java.util.List;
+public class SqlParser {
+
+    public SqlNode parse() throws Exception{
+        return expression();
+    }
+
+
+}
+PARSER_END(SqlParser)
+
+SKIP:
+{
+    " " | "\t" | "\n" | "\r"
+}
+
+
+// select t1.id,t1.name,t2.addr from t1 join t2 on t1.id=t2.id
+
+
+TOKEN:
+{
+    <SELECT: "select">
+|   <FROM: "from">
+|   <JOIN: "join">
+|   <ON: "on">
+|   <ID: (["a"-"z"] | ["A"-"Z"] | "_") ( ["a"-"z"] | ["A"-"Z"] | "_" | ["0"-"9"] )*>
+|   <COMMA: ",">
+|   <DOT: ".">
+|   <LPAREN: "(">
+|   <RPAREN: ")">
+|   <NUMBER: (["0"-"9"])+>
+|   <UPPER: "upper">
+|   <EOL: ";">
+}
+
+
+
+
+
+SqlNode expression():
+{
+    Token tableName;
+    Token columnName;
+    ProjectNode projectNode;
+    List<Column> columnList = new ArrayList<>();
+}
+{
+    <SELECT> columns(columnList)
+    {
+        projectNode = new ProjectNode();
+        projectNode.setNodeName("select");
+        projectNode.setColumnList(columnList);
+    }
+    <FROM> join(projectNode) <EOL>
+
+    { return projectNode;}
+}
+
+void columns(List<Column> columnList):
+{
+    Token t;
+    Token c;
+}
+{
+
+(
+   t=<ID> <DOT> c=<ID>  (<COMMA>)?
+    {
+      Column column = new Column(c.image,t.image);
+      columnList.add(column);
+    }
+)*
+
+}
+
+void join(ProjectNode projectNode):
+{
+    Token t1;
+    Token t2;
+    Token c1;
+    Token c2;
+    TableScanNode left;
+    TableScanNode right;
+    JoinNode joinNode = new JoinNode();
+
+}
+{
+    left=table() <JOIN> right=table()
+    {
+       joinNode.addChild(left);
+       joinNode.addChild(right);
+    }
+    <ON> t1=<ID> <DOT> c1=<ID> "=" t2=<ID> <DOT> c2=<ID>
+    {
+    Condition condition = new Condition();
+    Column colLeft = new Column(c1.image,t1.image);
+    condition.setLeft(colLeft);
+
+    Column colRight = new Column(c2.image,t2.image);
+    condition.setRight(colRight);
+
+    condition.setOp("=");
+
+    joinNode.setCondition(condition);
+
+    projectNode.addChild(joinNode);
+
+}
+
+
+}
+
+
+TableScanNode table():
+{
+    Token t;
+
+}
+{
+    t=<ID>
+    {
+    TableScanNode tableScanNode = new TableScanNode();
+    tableScanNode.setTableName(t.image);
+    tableScanNode.setInputs(null);
+    return tableScanNode;
+}
+}

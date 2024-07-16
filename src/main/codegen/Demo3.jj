@@ -1,0 +1,100 @@
+options {
+            STATIC = false;
+            OUTPUT_DIRECTORY = "../java/top/doe/javacc/demo3/gen";
+}
+
+// sql: select a.id,a.name,a.age,b.addr,b.phone from a join b on a.id = b.id;
+
+PARSER_BEGIN(HitaoSqlParser)
+package top.doe.javacc.demo3.gen;
+import java.util.List;
+import top.doe.javacc.demo3.nodes.*;
+public class HitaoSqlParser {
+
+}
+PARSER_END(HitaoSqlParser)
+
+SKIP : { " " | "\n" | "\t" | "\r" }
+
+TOKEN : { <SELECT: "select" >  }
+TOKEN : { <FROM: "from" >  }
+TOKEN : { <JOIN: "join" >  }
+TOKEN : { <ON: "on" >  }
+TOKEN : { <OP: "=" | ">="  | "<="  | ">" >  }
+TOKEN : { <ID: (["a"-"z"])+ | (["A"-"Z"])+ | (["0"-"9"])+ >}
+TOKEN : { <COMMA: ",">}
+TOKEN : { <DOT: ".">}
+TOKEN : { <EOL: ";">}
+
+
+SqlNode parseSelect():
+{
+     ProjectNode projectNode = new ProjectNode();
+
+}
+{
+    <SELECT> parse_column(projectNode.getColumnList())
+    <FROM> parse_join(projectNode)
+    <EOL>
+    {return projectNode;}
+}
+
+
+void parse_column(List<Column> columnList):
+{
+    Token t;
+    Token c;
+}
+{
+    (
+        t=<ID><DOT>c=<ID> (<COMMA>)?
+        {
+            String tableName = t.image;
+            String fieldName = c.image;
+            Column column = new Column(fieldName,tableName);
+            columnList.add(column);
+        }
+    )+
+
+}
+
+// a join b on a.id = b.id
+void parse_join(SqlNode parent):
+{
+    Token t1;
+    Token c1;
+    Token t2;
+    Token c2;
+    Token opToken;
+    SqlNode leftTableNode;
+    SqlNode rightTableNode;
+
+}
+{
+    leftTableNode=table() <JOIN> rightTableNode=table() <ON> t1=<ID><DOT>c1=<ID> opToken=<OP> t2=<ID><DOT>c2=<ID>
+    {
+    JoinNode joinNode = new JoinNode();
+    parent.addChild(joinNode);
+
+    joinNode.addChild(leftTableNode);
+    joinNode.addChild(rightTableNode);
+
+    Column lc = new Column(c1.image,t1.image);
+    Column rc = new Column(c2.image,t2.image);
+    Condition condition = new Condition(lc,rc,opToken.image);
+    joinNode.setCondition(condition);
+
+}
+}
+
+
+SqlNode table():
+{
+    Token t;
+}
+{
+    t=<ID>
+    {
+        return new TableScanNode(t.image);
+    }
+}
