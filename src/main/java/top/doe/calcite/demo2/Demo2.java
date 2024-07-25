@@ -1,7 +1,12 @@
 package top.doe.calcite.demo2;
 
+import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.enumerable.EnumerableConvention;
 import org.apache.calcite.adapter.enumerable.EnumerableRules;
+import org.apache.calcite.adapter.java.AbstractQueryableTable;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.interpreter.Bindables;
+import org.apache.calcite.linq4j.*;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.*;
 import org.apache.calcite.plan.hep.HepPlanner;
@@ -11,6 +16,7 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.*;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.TransformationRule;
 import org.apache.calcite.rel.type.RelDataType;
@@ -18,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelProtoDataType;
 import org.apache.calcite.schema.*;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -25,23 +32,13 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.*;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.lang.reflect.Type;
 import java.util.*;
 
 public class Demo2 {
     public static void main(String[] args) throws SqlParseException, ValidationException, RelConversionException {
 
         SchemaPlus rootSchema = Frameworks.createRootSchema(true);
-
-/*        rootSchema.add("od", new AbstractTable() {
-            @Override
-            public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-                return typeFactory.builder()
-                        .add("order_sn", SqlTypeName.VARCHAR)
-                        .add("id", SqlTypeName.BIGINT)
-                        .add("address", SqlTypeName.VARCHAR)
-                        .build();
-            }
-        });*/
 
         rootSchema.add("my_c",new MyCatalogSchema());
 
@@ -56,10 +53,16 @@ public class Demo2 {
         Planner planner = Frameworks.getPlanner(frameworkConfig);
 
 
-        SqlNode sqlNode = planner.parse("select order_sn,id from (select order_sn,id,address from my_c.my_d.od where id>5) as tmp  where order_sn>'od008'");
+        SqlNode sqlNode = planner.parse(
+                "select order_sn,id " +
+                        "from (" +
+                        "select order_sn,id,address " +
+                        "from my_c.my_d.od " +
+                        "where id>5) as tmp  " +
+                        "where order_sn>'od008' ");
         SqlNode validate = planner.validate(sqlNode);
         RelRoot relRoot = planner.rel(validate);
-        RelNode relNode = relRoot.rel;
+        RelNode relNode = relRoot.project();
 
 
         System.out.println("优化前-------------");
@@ -83,16 +86,47 @@ public class Demo2 {
         volcanoPlanner.addRelTraitDef(ConventionTraitDef.INSTANCE);
         volcanoPlanner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
 
-        // RelOptCluster relOptCluster = RelOptCluster.create(volcanoPlanner, relNode.getCluster().getRexBuilder());
-        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE);
+        RelOptCluster relOptCluster = RelOptCluster.create(volcanoPlanner, relNode.getCluster().getRexBuilder());
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_CORRELATE_RULE);
         volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_PROJECT_RULE);
         volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_FILTER_RULE);
-//        volcanoPlanner.addRule(CoreRules.FILTER_MERGE);
-//        volcanoPlanner.addRule(CoreRules.PROJECT_MERGE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_CALC_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_AGGREGATE_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_SORT_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_LIMIT_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_COLLECT_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_UNCOLLECT_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_MERGE_UNION_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_UNION_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_REPEAT_UNION_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_TABLE_SPOOL_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_INTERSECT_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_MINUS_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_TABLE_MODIFICATION_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_VALUES_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_WINDOW_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_TABLE_FUNCTION_SCAN_RULE);
+        volcanoPlanner.addRule(EnumerableRules.ENUMERABLE_MATCH_RULE);
+        volcanoPlanner.addRule(EnumerableRules.TO_INTERPRETER);
+        volcanoPlanner.addRule(CoreRules.FILTER_MERGE);
+        volcanoPlanner.addRule(CoreRules.PROJECT_MERGE);
+        volcanoPlanner.addRule(CoreRules.PROJECT_TABLE_SCAN);
+        volcanoPlanner.addRule(CoreRules.PROJECT_INTERPRETER_TABLE_SCAN);
+        volcanoPlanner.addRule(Bindables.BindableTableScanRule.Config.DEFAULT.toRule());
 
-        RelTraitSet plus = relNode.getTraitSet().plus(RelCollations.EMPTY).plus(EnumerableConvention.INSTANCE);
-        RelNode newRelNode = volcanoPlanner.changeTraits(relNode, plus);
 
+        for (RelOptRule rule : volcanoPlanner.getRules()) {
+            System.out.println(rule);
+        }
+
+
+
+
+        RelTraitSet desired = relNode.getTraitSet().replace(EnumerableConvention.INSTANCE);
+        RelNode newRelNode = volcanoPlanner.changeTraits(relNode, desired);
 
         volcanoPlanner.setRoot(newRelNode);
         RelNode bestExp1 = volcanoPlanner.findBestExp();
@@ -228,7 +262,7 @@ public class Demo2 {
 
             Table table;
             if(name.equals("od") || name.equals("OD")) {
-                table = new AbstractTable() {
+                /*table = new AbstractTable() {
                     @Override
                     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
                         RelDataType build = typeFactory.builder()
@@ -239,8 +273,10 @@ public class Demo2 {
 
                         return build;
                     }
-                };
+                };*/
 
+                Object[][] data = {};
+                table = new SimpleScannableTable(data);
             }else if(name.equals("member")){
                 table = new AbstractTable() {
                     @Override
@@ -343,6 +379,28 @@ public class Demo2 {
             call.transformTo(newNode);
 
 
+        }
+    }
+
+    public static class SimpleScannableTable extends AbstractTable implements ScannableTable {
+        private final Object[][] data;
+
+        public SimpleScannableTable(Object[][] data) {
+            this.data = data;
+        }
+
+        @Override
+        public Enumerable<Object[]> scan(DataContext root) {
+            return Linq4j.asEnumerable(data);
+        }
+
+        @Override
+        public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+            return typeFactory.builder()
+                    .add("order_sn", SqlTypeName.VARCHAR)
+                    .add("id", SqlTypeName.VARCHAR)
+                    .add("address", SqlTypeName.VARCHAR)
+                    .build();
         }
     }
 

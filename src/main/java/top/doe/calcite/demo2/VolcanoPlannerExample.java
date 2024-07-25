@@ -89,6 +89,11 @@ public class VolcanoPlannerExample {
         RelTraitSet desiredTraits =
                 relNode.getCluster().traitSet().replace(EnumerableConvention.INSTANCE);
 
+        for (RelOptRule rule : planner.getRules()) {
+            System.out.println(rule);
+        }
+
+
         relNode = planner.changeTraits(relNode, desiredTraits);
         //3. 通过 VolcanoPlanner 的 setRoot 方法注册相应的 RelNode，并进行相应的初始化操作
         planner.setRoot(relNode);
