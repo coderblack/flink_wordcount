@@ -1,6 +1,10 @@
 package top.doe.calcite.demo1;
 
 import org.apache.calcite.adapter.java.ReflectiveSchema;
+import org.apache.calcite.linq4j.Enumerable;
+import org.apache.calcite.linq4j.EnumerableDefaults;
+import org.apache.calcite.linq4j.Linq4j;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.rel.RelNode;
@@ -23,11 +27,11 @@ import org.apache.calcite.tools.RelRunners;
 import java.io.PrintWriter;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Arrays;
 
 public class Demo1 {
 
     public static void main(String[] args) throws Exception {
-
 
         // Build the schema
         SchemaPlus rootSchema = Frameworks.createRootSchema(true);
@@ -52,7 +56,7 @@ public class Demo1 {
         SqlNode sqlNode = planner.parse(
                 "select depts.name, count(emps.empid) " +
                         "from emps inner join depts on emps.deptno = depts.deptno " +
-                        "where emps.empid >3  " +
+                        "where emps.deptno >3  " +
                         "group by depts.deptno, depts.name "
                         //+"order by depts.name"
         );
@@ -69,7 +73,6 @@ public class Demo1 {
         // Convert the sql tree to a relation expression
         RelRoot relRoot = planner.rel(sqlNodeValidated);
 
-
         // Explain, print the relational expression
         RelNode relNode = relRoot.project();
         final RelWriter relWriter = new RelWriterImpl(new PrintWriter(System.out), SqlExplainLevel.EXPPLAN_ATTRIBUTES, false);
@@ -82,6 +85,7 @@ public class Demo1 {
         builder.addRuleInstance(CoreRules.FILTER_INTO_JOIN); //note: 添加 rule
         HepPlanner hepPlanner = new HepPlanner(builder.build());
 
+
         hepPlanner.setRoot(relNode);
         relNode = hepPlanner.findBestExp();
 
@@ -90,7 +94,6 @@ public class Demo1 {
         // Run it
         PreparedStatement run = RelRunners.run(relNode);
         ResultSet resultSet = run.executeQuery();
-
 
         System.out.println("------------------");
 
@@ -102,7 +105,6 @@ public class Demo1 {
             }
             System.out.println();
         }
-
 
     }
 }

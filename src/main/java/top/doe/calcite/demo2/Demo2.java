@@ -6,9 +6,11 @@ import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.adapter.java.AbstractQueryableTable;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.interpreter.Bindables;
+import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.*;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.plan.*;
+import org.apache.calcite.plan.hep.HepMatchOrder;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
@@ -69,18 +71,26 @@ public class Demo2 {
         System.out.println(relNode.explain());
 
 
-/*        HepProgram hepProgram = new HepProgramBuilder()
-                .addConverters(true)
+        HepProgram hepProgram = new HepProgramBuilder()
+                .addMatchOrder(HepMatchOrder.TOP_DOWN)
+                //.addConverters(true)
+                .addGroupBegin()
                 .addRuleInstance(CoreRules.FILTER_MERGE)
-                //.addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE)
-                .addRuleInstance(CoreRules.PROJECT_MERGE)
-                .addRuleInstance(new MyOptRule())
+                .addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE)
+                .addGroupEnd()
+                //.addRuleInstance(CoreRules.PROJECT_MERGE)
+                //.addRuleInstance(new MyOptRule())
                 .build();
         HepPlanner hepPlanner = new HepPlanner(hepProgram);
         hepPlanner.setRoot(relNode);
         RelNode bestExp = hepPlanner.findBestExp();
         System.out.println("hep优化后-------------");
-        System.out.println(bestExp.explain());*/
+        System.out.println(bestExp.explain());
+
+
+        System.exit(1);
+
+
 
         VolcanoPlanner volcanoPlanner = (VolcanoPlanner) relNode.getCluster().getPlanner();
         volcanoPlanner.addRelTraitDef(ConventionTraitDef.INSTANCE);
