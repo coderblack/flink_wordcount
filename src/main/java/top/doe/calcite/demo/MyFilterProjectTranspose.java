@@ -1,4 +1,4 @@
-package top.doe.calcite.demo1;
+package top.doe.calcite.demo;
 
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelRule;

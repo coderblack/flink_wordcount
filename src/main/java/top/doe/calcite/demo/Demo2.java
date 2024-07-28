@@ -1,4 +1,4 @@
-package top.doe.calcite.demo1;
+package top.doe.calcite.demo;
 
 import org.apache.calcite.adapter.java.ReflectiveSchema;
 import org.apache.calcite.plan.hep.HepMatchOrder;

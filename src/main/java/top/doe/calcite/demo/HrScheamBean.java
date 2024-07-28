@@ -1,4 +1,4 @@
-package top.doe.calcite.demo1;
+package top.doe.calcite.demo;
 
 import java.util.Arrays;
 import java.util.List;
